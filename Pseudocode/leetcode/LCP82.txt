@@ -1,0 +1,158 @@
+﻿全局变量与辅助函数
+
+n            ← 宝石数量
+P            ← 模数
+Target       ← 目标余数
+
+gems_val[i]  ← gem[i] mod P
+gems_len[i]  ← gem[i] 的十进制位数
+
+p10[k]       ← 10^k mod P
+
+dp[mask]     ← 小规模 mask 的所有可能结果（multiset）
+mask_len[mask] ← mask 对应结构的总位数
+
+CACHE_LIMIT ← 6
+singular    ← (P == 2 or P == 5)
+inv10       ← 10 在模 P 下的逆元（若存在）
+
+
+快速幂与逆元
+
+FUNCTION power(base, exp):
+    res ← 1
+    base ← base mod P
+    WHILE exp > 0:
+        IF exp 为奇数:
+            res ← (res * base) mod P
+        base ← (base * base) mod P
+        exp ← exp / 2
+    RETURN res
+
+FUNCTION modInverse(x):
+    RETURN power(x, P - 2)
+
+计算 mask 的总方案数（不关心余数）
+
+FUNCTION countAllStructure(mask):
+    IF popcount(mask) ≤ CACHE_LIMIT:
+        RETURN size(dp[mask])
+
+    total ← 0
+    FOR s ⊂ mask 且 s ≠ 0:
+        total += countAllStructure(s) × countAllStructure(mask XOR s)
+    RETURN total
+
+
+核心递归：统计 mask 拼接后余数为 target_rem 的方案数
+
+FUNCTION countWays(mask, target_rem):
+    IF popcount(mask) ≤ CACHE_LIMIT:
+        在 dp[mask] 中二分统计等于 target_rem 的个数
+        RETURN 该数量
+
+    total ← 0
+
+    FOR s ⊂ mask 且 s ≠ 0:
+        other ← mask XOR s
+
+        Ls ← mask_len[s]
+        Lo ← mask_len[other]
+
+        C   ← (10^(Ls + Lo + 1) + 9) mod P
+        M_s ← 10^(Lo + 1) mod P
+
+        选较小子集为 small_mask，另一个为 large_mask
+        smallIsLeft ← small_mask 在左侧？
+
+        FOR v_small ∈ dp[small_mask]:
+
+            IF smallIsLeft:
+                current ← (C + v_small × M_s) mod P
+                rhs ← (target_rem - current + P) mod P
+
+                IF singular:
+                    IF rhs == 0:
+                        total += countAllStructure(large_mask)
+                ELSE:
+                    need ← rhs × inv10 mod P
+                    total += countWays(large_mask, need)
+
+            ELSE:
+                M_large ← 10^(mask_len[small_mask] + 1) mod P
+                current ← (C + v_small × 10) mod P
+                rhs ← (target_rem - current + P) mod P
+
+                IF singular:
+                    IF rhs == 0:
+                        total += countAllStructure(large_mask)
+                ELSE:
+                    invM ← modInverse(M_large)
+                    need ← rhs × invM mod P
+                    total += countWays(large_mask, need)
+
+    RETURN total
+
+主函数
+
+FUNCTION treeOfInfiniteSouls(gem[], P, Target):
+
+    n ← gem.size
+
+    FOR i = 0..n-1:
+        gems_val[i] ← gem[i] mod P
+        gems_len[i] ← 位数(gem[i])
+
+    total_digits ← Σ gems_len[i]
+
+    构造 p10[k] = 10^k mod P
+
+    IF P == 2 or P == 5:
+        singular ← true
+    ELSE:
+        singular ← false
+        inv10 ← modInverse(10)
+
+    limit ← 2^n
+    FOR mask = 1..limit-1:
+        k ← popcount(mask)
+        digits ← Σ gems_len[i] (i ∈ mask)
+        mask_len[mask] ← digits + 4k - 2
+
+    按 popcount 分类所有 mask
+
+    FOR k = 1..min(n, CACHE_LIMIT):
+        FOR mask ∈ masks with popcount = k:
+
+            IF k == 1:
+                idx ← mask 中唯一的 bit
+                val ← (10^(len+1) + gem_val×10 + 9) mod P
+                dp[mask].push(val)
+
+            ELSE:
+                FOR s ⊂ mask 且 s ≠ 0:
+                    other ← mask XOR s
+
+                    Ls ← mask_len[s]
+                    Lo ← mask_len[other]
+
+                    C ← (10^(Ls + Lo + 1) + 9) mod P
+                    M_s ← 10^(Lo + 1)
+
+                    FOR v_l ∈ dp[s]:
+                        base ← (C + v_l × M_s) mod P
+                        FOR v_r ∈ dp[other]:
+                            res ← (base + v_r × 10) mod P
+                            dp[mask].push(res)
+
+                排序 dp[mask]
+
+    full_mask ← (1 << n) - 1
+
+    IF n ≤ CACHE_LIMIT:
+        在 dp[full_mask] 中统计 Target 出现次数
+        RETURN 该次数
+    ELSE:
+        RETURN countWays(full_mask, Target)
+
+

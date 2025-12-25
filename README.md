@@ -16,14 +16,12 @@ The main purpose of this project is **learning, discussion, and reference**.
 ├── problems/
 │ ├── <platform_name>/
 │ │ ├── <problem_name>/
-│ │ │ └── solution.*
 │ │ └── ...
 │ └── ...
 │
 ├── Pseudocode/
 │ ├── <platform_name>/
 │ │ ├── <problem_name>/
-│ │ │ └── pseudocode.md
 │ │ └── ...
 │ └── ...
 │

@@ -7,7 +7,6 @@ public:
 		int n = grid.size();
 		if (n == 1) return 0;
 
-		// 前缀和预处理分数之和
 		long long sm[n + 2][n + 2];
 		memset(sm, 0, sizeof(sm));
 		for (int j = 1; j <= n; j++) for (int i = 1; i <= n; i++) sm[j][i] = sm[j][i - 1] + grid[i - 1][j - 1];
